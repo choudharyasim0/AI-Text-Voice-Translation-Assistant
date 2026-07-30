@@ -140,28 +140,7 @@ http://127.0.0.1:5000
 
 # 🎥 Demo
 
-Add your demo video here.
-
-Example:
-
 * LinkedIn Demo Video
-* YouTube Demo
-
----
-
-# 📸 Screenshots
-
-## 🏠 Home Page
-
-*Add screenshot here.*
-
-## 🌍 Translation Result
-
-*Add screenshot here.*
-
-## 🎤 Voice Recognition
-
-*Add screenshot here.*
 
 ---
 
