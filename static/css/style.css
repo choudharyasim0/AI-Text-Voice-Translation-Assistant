@@ -529,3 +529,36 @@ textarea::placeholder {
         gap: 18px;
     }
 }
+
+/* =====================================
+   FIX: FOOTER BELOW MAIN APPLICATION
+===================================== */
+
+/* Stack application and footer vertically */
+body {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    width: 100%;
+    min-height: 100vh;
+}
+
+/* Keep the complete application in its own row */
+body > .app-layout {
+    flex: 0 0 auto;
+    width: 100%;
+}
+
+/* Footer must occupy a separate full-width row */
+body > .site-footer {
+    display: block;
+    position: relative;
+    flex: 0 0 auto;
+    align-self: stretch;
+    width: 100%;
+    max-width: 100%;
+    margin: 40px 0 0;
+    box-sizing: border-box;
+    clear: both;
+}
