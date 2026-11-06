@@ -3,7 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AI Language Translator</title>
+    
+    <!-- SEO Optimization Meta Tags -->
+    <title>AI Language Translator | M Asim Imtiaz</title>
+    <meta name="description" content="AI Text and Voice Translation Assistant developed by M Asim Imtiaz. A powerful multi-language speech and text translation application built with Python Flask.">
+    <meta name="keywords" content="M Asim Imtiaz, AI Translator, Voice Assistant, Python Flask Project, Asim Imtiaz Portfolio, Machine Learning">
+    <meta name="author" content="M Asim Imtiaz">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -29,67 +35,75 @@
             </div>
         </aside>
 
-        <main class="main-content">
-            <section id="text-section" class="section-pane active">
-                <div class="pane-header">
-                    <h2>Text Translation</h2>
-                    <p>Translate typed sentences instantly across languages.</p>
-                </div>
-                <div class="workspace">
-                    <div class="box">
-                        <div class="box-header">
-                            <span>Source</span>
-                            <select id="sourceLang"></select>
-                        </div>
-                        <textarea id="inputText" placeholder="Type text here..."></textarea>
+        <main class="main-content d-flex flex-column justify-content-between min-vh-100">
+            <div>
+                <section id="text-section" class="section-pane active">
+                    <div class="pane-header">
+                        <h2>Text Translation</h2>
+                        <p>Translate typed sentences instantly across languages.</p>
                     </div>
-                    <div class="box">
-                        <div class="box-header">
-                            <span>Result</span>
-                            <div class="box-actions">
-                                <select id="targetLang"></select>
-                                <button class="icon-btn" id="copyBtn" title="Copy"><i class="fa-regular fa-copy"></i></button>
-                                <button class="icon-btn" id="swapBtn" title="Swap languages"><i class="fa-solid fa-right-left"></i></button>
-                                <button class="icon-btn" id="listenBtn" title="Speak"><i class="fa-solid fa-volume-high"></i></button>
+                    <div class="workspace">
+                        <div class="box">
+                            <div class="box-header">
+                                <span>Source</span>
+                                <select id="sourceLang"></select>
+                            </div>
+                            <textarea id="inputText" placeholder="Type text here..."></textarea>
+                        </div>
+                        <div class="box">
+                            <div class="box-header">
+                                <span>Result</span>
+                                <div class="box-actions">
+                                    <select id="targetLang"></select>
+                                    <button class="icon-btn" id="copyBtn" title="Copy"><i class="fa-regular fa-copy"></i></button>
+                                    <button class="icon-btn" id="swapBtn" title="Swap languages"><i class="fa-solid fa-right-left"></i></button>
+                                    <button class="icon-btn" id="listenBtn" title="Speak"><i class="fa-solid fa-volume-high"></i></button>
+                                </div>
+                            </div>
+                            <textarea id="outputText" placeholder="Translation will appear here..." readonly></textarea>
+                        </div>
+                    </div>
+                    <div class="action-bar">
+                        <button id="translateBtn" class="btn">Translate Text</button>
+                        <button id="clearBtn" class="btn btn-secondary">Clear</button>
+                    </div>
+                </section>
+
+                <section id="voice-section" class="section-pane">
+                    <div class="pane-header">
+                        <h2>Voice Translation</h2>
+                        <p>Record your voice to transcribe and translate automatically.</p>
+                    </div>
+                    <div class="workspace voice-workspace">
+                        <div class="box voice-box">
+                            <div class="box-header">
+                                <span>Voice Input / Transcription</span>
+                                <select id="voiceSourceLang"></select>
+                            </div>
+                            <textarea id="voiceInputText" placeholder="Your spoken words will appear here..."></textarea>
+                            <div class="voice-actions">
+                                <button id="micBtn" class="btn btn-danger">🎙️ Start Recording</button>
                             </div>
                         </div>
-                        <textarea id="outputText" placeholder="Translation will appear here..." readonly></textarea>
+                        <div class="box voice-box">
+                            <div class="box-header">
+                                <span>Translation Result</span>
+                                <select id="voiceTargetLang"></select>
+                            </div>
+                            <textarea id="voiceOutputText" placeholder="Voice translation will appear here..." readonly></textarea>
+                            <div class="voice-actions">
+                                <button id="voiceTranslateBtn" class="btn">Translate Voice</button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="action-bar">
-                    <button id="translateBtn" class="btn">Translate Text</button>
-                    <button id="clearBtn" class="btn btn-secondary">Clear</button>
-                </div>
-            </section>
+                </section>
+            </div>
 
-            <section id="voice-section" class="section-pane">
-                <div class="pane-header">
-                    <h2>Voice Translation</h2>
-                    <p>Record your voice to transcribe and translate automatically.</p>
-                </div>
-                <div class="workspace voice-workspace">
-                    <div class="box voice-box">
-                        <div class="box-header">
-                            <span>Voice Input / Transcription</span>
-                            <select id="voiceSourceLang"></select>
-                        </div>
-                        <textarea id="voiceInputText" placeholder="Your spoken words will appear here..."></textarea>
-                        <div class="voice-actions">
-                            <button id="micBtn" class="btn btn-danger">🎙️ Start Recording</button>
-                        </div>
-                    </div>
-                    <div class="box voice-box">
-                        <div class="box-header">
-                            <span>Translation Result</span>
-                            <select id="voiceTargetLang"></select>
-                        </div>
-                        <textarea id="voiceOutputText" placeholder="Voice translation will appear here..." readonly></textarea>
-                        <div class="voice-actions">
-                            <button id="voiceTranslateBtn" class="btn">Translate Voice</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            <!-- Page Footer Section -->
+            <footer class="app-footer text-center py-3 mt-4 border-top opacity-75">
+                <p class="mb-1">Developed by <strong>M Asim Imtiaz</strong> | AI & Software Developer</p>
+                <small>© 2026 M Asim Imtiaz. All Rights Reserved.</small>
+            </footer>
         </main>
     </div>
 
