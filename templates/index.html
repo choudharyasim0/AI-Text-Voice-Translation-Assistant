@@ -1,10 +1,11 @@
+
 <!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    
-    <!-- SEO Optimization Meta Tags -->
+
+    <!-- SEO Meta Tags -->
     <title>AI Language Translator | M Asim Imtiaz</title>
     <meta name="description" content="AI Text and Voice Translation Assistant developed by M Asim Imtiaz. A powerful multi-language speech and text translation application built with Python Flask.">
     <meta name="keywords" content="M Asim Imtiaz, AI Translator, Voice Assistant, Python Flask Project, Asim Imtiaz Portfolio, Machine Learning">
@@ -17,79 +18,117 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body>
     <div class="app-layout">
         <aside class="sidebar">
             <div class="sidebar-brand">⚡ AI Translator</div>
+
             <ul class="menu-list">
-                <li class="menu-item active" onclick="switchTab('text', this)"><i class="fa-solid fa-language"></i> Text Translation</li>
-                <li class="menu-item" onclick="switchTab('voice', this)"><i class="fa-solid fa-microphone"></i> Voice Translation</li>
-                <li class="menu-item" id="historyBtn"><i class="fa-solid fa-clock-rotate-left"></i> History</li>
+                <li class="menu-item active" onclick="switchTab('text', this)">
+                    <i class="fa-solid fa-language"></i> Text Translation
+                </li>
+
+                <li class="menu-item" onclick="switchTab('voice', this)">
+                    <i class="fa-solid fa-microphone"></i> Voice Translation
+                </li>
+
+                <li class="menu-item" id="historyBtn">
+                    <i class="fa-solid fa-clock-rotate-left"></i> History
+                </li>
             </ul>
+
             <div class="sidebar-footer">
                 <label class="save-history">
                     <input type="checkbox" id="saveHistory" checked>
                     <span>Save history</span>
                 </label>
-                <button id="themeBtn" class="btn btn-secondary" title="Switch theme"><i class="fa-solid fa-sun"></i></button>
+
+                <button id="themeBtn" class="btn btn-secondary" title="Switch theme">
+                    <i class="fa-solid fa-sun"></i>
+                </button>
             </div>
         </aside>
 
         <main class="main-content">
+
+            <!-- Text Translation Section -->
             <section id="text-section" class="section-pane active">
                 <div class="pane-header">
                     <h2>Text Translation</h2>
                     <p>Translate typed sentences instantly across languages.</p>
                 </div>
+
                 <div class="workspace">
                     <div class="box">
                         <div class="box-header">
                             <span>Source</span>
                             <select id="sourceLang"></select>
                         </div>
+
                         <textarea id="inputText" placeholder="Type text here..."></textarea>
                     </div>
+
                     <div class="box">
                         <div class="box-header">
                             <span>Result</span>
+
                             <div class="box-actions">
                                 <select id="targetLang"></select>
-                                <button class="icon-btn" id="copyBtn" title="Copy"><i class="fa-regular fa-copy"></i></button>
-                                <button class="icon-btn" id="swapBtn" title="Swap languages"><i class="fa-solid fa-right-left"></i></button>
-                                <button class="icon-btn" id="listenBtn" title="Speak"><i class="fa-solid fa-volume-high"></i></button>
+
+                                <button class="icon-btn" id="copyBtn" title="Copy">
+                                    <i class="fa-regular fa-copy"></i>
+                                </button>
+
+                                <button class="icon-btn" id="swapBtn" title="Swap languages">
+                                    <i class="fa-solid fa-right-left"></i>
+                                </button>
+
+                                <button class="icon-btn" id="listenBtn" title="Speak">
+                                    <i class="fa-solid fa-volume-high"></i>
+                                </button>
                             </div>
                         </div>
+
                         <textarea id="outputText" placeholder="Translation will appear here..." readonly></textarea>
                     </div>
                 </div>
+
                 <div class="action-bar">
                     <button id="translateBtn" class="btn">Translate Text</button>
                     <button id="clearBtn" class="btn btn-secondary">Clear</button>
                 </div>
             </section>
 
+            <!-- Voice Translation Section -->
             <section id="voice-section" class="section-pane">
                 <div class="pane-header">
                     <h2>Voice Translation</h2>
                     <p>Record your voice to transcribe and translate automatically.</p>
                 </div>
+
                 <div class="workspace voice-workspace">
                     <div class="box voice-box">
                         <div class="box-header">
                             <span>Voice Input / Transcription</span>
                             <select id="voiceSourceLang"></select>
                         </div>
+
                         <textarea id="voiceInputText" placeholder="Your spoken words will appear here..."></textarea>
+
                         <div class="voice-actions">
                             <button id="micBtn" class="btn btn-danger">🎙️ Start Recording</button>
                         </div>
                     </div>
+
                     <div class="box voice-box">
                         <div class="box-header">
                             <span>Translation Result</span>
                             <select id="voiceTargetLang"></select>
                         </div>
+
                         <textarea id="voiceOutputText" placeholder="Voice translation will appear here..." readonly></textarea>
+
                         <div class="voice-actions">
                             <button id="voiceTranslateBtn" class="btn">Translate Voice</button>
                         </div>
@@ -99,13 +138,25 @@
 
             <!-- Professional Footer -->
             <footer class="site-footer">
-                <p class="footer-title">Developed with <i class="fa-solid fa-heart" style="color: #e25555;"></i> by <strong>M Asim Imtiaz</strong></p>
-                <p class="footer-subtitle">AI & Software Developer</p>
+                <p class="footer-credit">
+                    Developed with ❤️ by <strong>M Asim Imtiaz</strong>
+                    | AI &amp; Software Developer
+                </p>
+
                 <div class="footer-links">
-                    <a href="https://github.com/choudharyasim0" target="_blank"><i class="fa-brands fa-github"></i> GitHub</a>
+                    <a href="https://github.com/choudharyasim0"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        <i class="fa-brands fa-github"></i>
+                        GitHub Profile
+                    </a>
                 </div>
-                <p class="footer-copy">© 2026 M Asim Imtiaz. All Rights Reserved.</p>
+
+                <p class="footer-copy">
+                    © 2026 M Asim Imtiaz. All Rights Reserved.
+                </p>
             </footer>
+
         </main>
     </div>
 
@@ -116,9 +167,11 @@
                     <h5 class="modal-title">Translation History</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+
                 <div class="modal-body">
                     <div id="historyList"></div>
                 </div>
+
                 <div class="modal-footer">
                     <button id="clearHistoryBtn" class="btn btn-secondary">Clear History</button>
                 </div>
@@ -140,6 +193,7 @@
             element.classList.add('active');
         }
     </script>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
