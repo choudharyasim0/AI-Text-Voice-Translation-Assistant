@@ -399,3 +399,54 @@ textarea::placeholder {
         grid-template-columns: 1fr;
     }
 }
+
+/* =========================================
+   Professional Developer Footer
+   Developed by M Asim Imtiaz
+========================================= */
+
+.site-footer {
+    margin-top: 50px;
+    padding: 25px 15px 20px;
+    border-top: 1px solid rgba(128, 128, 128, 0.20);
+    text-align: center;
+    width: 100%;
+}
+
+.site-footer .footer-credit {
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.site-footer .footer-credit strong {
+    font-weight: 700;
+}
+
+.footer-links {
+    margin-bottom: 12px;
+}
+
+.footer-links a {
+    color: #4a6cf7;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+    color: #3451c6;
+    text-decoration: none;
+}
+
+.footer-links a i {
+    margin-right: 5px;
+}
+
+.site-footer .footer-copy {
+    margin-bottom: 0;
+    font-size: 12px;
+    opacity: 0.65;
+    color: inherit;
+}
