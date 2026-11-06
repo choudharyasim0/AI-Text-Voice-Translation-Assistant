@@ -548,3 +548,156 @@ textarea::placeholder {
         font-size: 11px;
     }
 }
+
+/* =========================================
+   PROFESSIONAL WEBSITE FOOTER
+   M Asim Imtiaz | AI & Software Developer
+========================================= */
+
+.site-footer {
+    position: relative;
+    display: block;
+    width: 100%;
+    margin-top: 40px;
+    padding: 42px 20px 22px;
+    background: #111827;
+    color: #f3f4f6;
+    text-align: center;
+    border-top: 3px solid #4a6cf7;
+    box-sizing: border-box;
+    clear: both;
+}
+
+.footer-inner {
+    width: 100%;
+    max-width: 1150px;
+    margin: 0 auto;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    gap: 13px;
+}
+
+.footer-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.footer-icon {
+    font-size: 23px;
+}
+
+.footer-description {
+    max-width: 500px;
+    margin: 0;
+
+    color: #aeb8c8;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.footer-divider {
+    width: 65px;
+    height: 2px;
+
+    margin: 8px 0;
+
+    background: #4a6cf7;
+    border-radius: 10px;
+}
+
+.footer-credit {
+    margin: 0;
+
+    color: #e5e7eb;
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.footer-credit strong {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.footer-role {
+    color: #aeb8c8;
+}
+
+.footer-links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin: 4px 0;
+}
+
+.footer-links a {
+    color: #91a7ff;
+    text-decoration: none;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    transition: color 0.25s ease;
+}
+
+.footer-links a:hover {
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.footer-links a i {
+    margin-right: 6px;
+    font-size: 16px;
+}
+
+.footer-copy {
+    margin: 7px 0 0;
+
+    color: #9ca3af;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+
+/* =========================================
+   RESPONSIVE FOOTER
+========================================= */
+
+@media (max-width: 576px) {
+
+    .site-footer {
+        margin-top: 25px;
+        padding: 30px 15px 20px;
+    }
+
+    .footer-brand {
+        font-size: 17px;
+    }
+
+    .footer-description {
+        font-size: 12px;
+    }
+
+    .footer-credit {
+        font-size: 13px;
+    }
+
+    .footer-role {
+        display: block;
+        margin-top: 3px;
+    }
+
+    .footer-copy {
+        font-size: 11px;
+    }
+
+}
