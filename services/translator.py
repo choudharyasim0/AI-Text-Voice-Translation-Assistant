@@ -19,9 +19,12 @@ class TranslatorService:
 
     def translate(self, text, source='auto', target='en', save_history=True):
         try:
-            # deep-translator کا استعمال (یہ Vercel IPs پر 100% مستحکم ہے اور Rate Limit ایرر نہیں دیتا)
+            # deep-translator کا سادھا استعمال (کسی API Key یا OAuth کی ضرورت نہیں)
             translator = GoogleTranslator(source=source, target=target)
             translated_text = translator.translate(text)
+
+            if not translated_text:
+                raise Exception("Empty translation received")
 
             if save_history:
                 self.save_to_history(text, translated_text, source, target)
@@ -49,7 +52,7 @@ class TranslatorService:
                 'target_lang': target_lang,
                 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
-            history.insert(0, entry)  # نئی اینٹری سب سے اوپر آئے گی
+            history.insert(0, entry)
 
             with open(self.history_file, 'w', encoding='utf-8') as f:
                 json.dump(history[:50], f, ensure_ascii=False, indent=2)
