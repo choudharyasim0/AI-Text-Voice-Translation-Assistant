@@ -5,7 +5,7 @@ from flask import Flask, jsonify, render_template, request, send_file
 from config import Config
 from services.languages import LanguageService
 from services.speech import SpeechService
-from services.translator import TranslatorService
+from services.translator import TranslationError, TranslatorService
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -27,19 +27,31 @@ def languages():
 @app.route("/translate", methods=["POST"])
 def translate():
     try:
-        data = request.get_json(silent=True) or {}
-        text = (data.get("text") or "").strip()
-        source = data.get("source") or "auto"
-        target = data.get("target") or "en"
-        save_history = data.get("save_history", True)
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({"success": False, "error": "A JSON object is required."}), 400
 
-        if not text:
+        text = data.get("text")
+        if not isinstance(text, str) or not text.strip():
             return jsonify({"success": False, "error": "Text is required."}), 400
 
-        translated = translator.translate(text, source, target, save_history=save_history)
+        source = data.get("source") or "auto"
+        target = data.get("target") or "en"
+        if not isinstance(source, str) or not isinstance(target, str):
+            return jsonify({"success": False, "error": "Invalid language selection."}), 400
+
+        translated = translator.translate(
+            text,
+            source,
+            target,
+            save_history=data.get("save_history", True)
+        )
         return jsonify({"success": True, "translation": translated})
-    except Exception as exc:
-        return jsonify({"success": False, "error": str(exc)}), 500
+    except TranslationError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 502
+    except Exception:
+        app.logger.exception("Unexpected translation endpoint error")
+        return jsonify({"success": False, "error": "An unexpected server error occurred."}), 500
 
 
 @app.route("/history")
