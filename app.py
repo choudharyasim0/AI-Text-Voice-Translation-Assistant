@@ -10,93 +10,106 @@ from services.translator import TranslationError, TranslatorService
 app = Flask(__name__)
 app.config.from_object(Config)
 
-translator = TranslatorService(app.config["HISTORY_FILE"])
-speech = SpeechService(app.config["AUDIO_FOLDER"])
 
-
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-
-@app.route("/languages")
-def languages():
-    return jsonify(LanguageService.get_languages())
-
-
-@app.route("/translate", methods=["POST"])
-def translate():
+def _initialize_services():
+    """Keep import-time filesystem/setup failures from preventing Flask startup."""
     try:
-        data = request.get_json(silent=True)
-        if not isinstance(data, dict):
-            return jsonify({"success": False, "error": "A JSON object is required."}), 400
-
-        text = data.get("text")
-        if not isinstance(text, str) or not text.strip():
-            return jsonify({"success": False, "error": "Text is required."}), 400
-
-        source = data.get("source") or "auto"
-        target = data.get("target") or "en"
-        if not isinstance(source, str) or not isinstance(target, str):
-            return jsonify({"success": False, "error": "Invalid language selection."}), 400
-
-        translated = translator.translate(
-            text,
-            source,
-            target,
-            save_history=data.get("save_history", True)
-        )
-        return jsonify({"success": True, "translation": translated})
-    except TranslationError as exc:
-        return jsonify({"success": False, "error": str(exc)}), 502
+        translation_service = TranslatorService(app.config.get('HISTORY_FILE', '/tmp/history.json'))
     except Exception:
-        app.logger.exception("Unexpected translation endpoint error")
-        return jsonify({"success": False, "error": "An unexpected server error occurred."}), 500
+        app.logger.exception('Translator initialization failed')
+        translation_service = None
+    try:
+        speech_service = SpeechService(app.config.get('AUDIO_FOLDER'))
+    except Exception:
+        app.logger.exception('Speech service initialization failed')
+        speech_service = None
+    return translation_service, speech_service
 
 
-@app.route("/history")
+translator, speech = _initialize_services()
+
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+
+@app.route('/languages')
+def languages():
+    try:
+        return jsonify(LanguageService.get_languages())
+    except Exception:
+        app.logger.exception('Language listing failed')
+        return jsonify({'auto': 'Auto Detect', 'en': 'English'}), 200
+
+
+@app.route('/translate', methods=['POST'])
+def translate():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'success': False, 'error': 'A JSON object is required.'}), 400
+    text = data.get('text')
+    if not isinstance(text, str) or not text.strip():
+        return jsonify({'success': False, 'error': 'Text is required.'}), 400
+    source = data.get('source') or 'auto'
+    target = data.get('target') or 'en'
+    if not isinstance(source, str) or not isinstance(target, str):
+        return jsonify({'success': False, 'error': 'Invalid language selection.'}), 400
+    if translator is None:
+        return jsonify({'success': False, 'error': 'Translation service is unavailable.'}), 503
+    try:
+        result = translator.translate(text, source, target, save_history=data.get('save_history', True))
+        return jsonify({'success': True, 'translation': result})
+    except TranslationError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 502
+    except Exception:
+        app.logger.exception('Translation request failed')
+        return jsonify({'success': False, 'error': 'Translation request failed.'}), 500
+
+
+@app.route('/history')
 def history():
+    if translator is None:
+        return jsonify([])
     try:
         return jsonify(translator.get_history())
-    except Exception as exc:
-        return jsonify({"success": False, "error": str(exc)}), 500
+    except Exception:
+        app.logger.exception('History retrieval failed')
+        return jsonify([])
 
 
-@app.route("/clear-history", methods=["DELETE"])
+@app.route('/clear-history', methods=['DELETE'])
 def clear_history():
+    if translator is None:
+        return jsonify({'success': True})
     try:
         translator.clear_history()
-        return jsonify({"success": True})
-    except Exception as exc:
-        return jsonify({"success": False, "error": str(exc)}), 500
+        return jsonify({'success': True})
+    except Exception:
+        app.logger.exception('History clearing failed')
+        return jsonify({'success': False, 'error': 'Could not clear history.'}), 500
 
 
-@app.route("/text-to-speech", methods=["POST"])
+@app.route('/text-to-speech', methods=['POST'])
 def text_to_speech():
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
-        return jsonify({"success": False, "error": "A JSON object is required."}), 400
-
-    text = data.get("text")
+        return jsonify({'success': False, 'error': 'A JSON object is required.'}), 400
+    text = data.get('text')
     if not isinstance(text, str) or not text.strip():
-        return jsonify({"success": False, "error": "Text is required."}), 400
-
-    lang = data.get("lang") or "en"
+        return jsonify({'success': False, 'error': 'Text is required.'}), 400
+    lang = data.get('lang') or 'en'
     if not isinstance(lang, str):
-        return jsonify({"success": False, "error": "Invalid language selection."}), 400
-
+        return jsonify({'success': False, 'error': 'Invalid language selection.'}), 400
+    if speech is None:
+        return jsonify({'success': False, 'error': 'Speech service is unavailable.'}), 503
     try:
-        audio_buffer = speech.generate_audio(text, lang)
-        return send_file(
-            audio_buffer,
-            mimetype="audio/mpeg",
-            as_attachment=False,
-            download_name="speech.mp3",
-        )
+        buffer = speech.generate_audio(text, lang)
+        return send_file(buffer, mimetype='audio/mpeg', as_attachment=False, download_name='speech.mp3')
     except Exception:
-        app.logger.exception("Text-to-speech generation failed")
-        return jsonify({"success": False, "error": "Text-to-speech generation failed."}), 502
+        app.logger.exception('Text-to-speech request failed')
+        return jsonify({'success': False, 'error': 'Text-to-speech generation failed.'}), 502
 
 
-if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+if __name__ == '__main__':
+    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))

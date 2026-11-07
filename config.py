@@ -1,6 +1,13 @@
 import os
 
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'default-secret-key')
-    HISTORY_FILE = os.path.join(os.path.dirname(__file__), 'data', 'history.json')
-    AUDIO_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'audio')
+    # Vercel only permits runtime writes under /tmp. Allow an explicit override
+    # for deployments with a persistent writable filesystem.
+    HISTORY_FILE = os.environ.get(
+        'HISTORY_FILE',
+        '/tmp/history.json' if os.environ.get('VERCEL') else '/tmp/history.json',
+    )
+    # Retained for compatibility; SpeechService keeps generated audio in memory.
+    AUDIO_FOLDER = os.environ.get('AUDIO_FOLDER', '/tmp/audio')
