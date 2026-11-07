@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,8 +7,8 @@
     <title>AI Language Translator | M Asim Imtiaz</title>
 
     <!-- SEO Metadata -->
-    <meta name="description" content="AI-powered text and voice language translator developed by M Asim Imtiaz. Translate text and speech across multiple languages.">
-    <meta name="keywords" content="AI Language Translator, Text Translation, Voice Translation, Speech Translator, Python Flask, M Asim Imtiaz, AI Developer">
+    <meta name="description" content="AI-powered text and voice translation assistant. Translate text and speech across languages.">
+    <meta name="keywords" content="AI Language Translator, Text Translation, Voice Translation, Image OCR, Python Flask">
     <meta name="author" content="M Asim Imtiaz">
     <meta name="robots" content="index, follow">
     <meta name="language" content="English">
@@ -56,6 +55,10 @@
 
                 <li class="menu-item" onclick="switchTab('voice', this)">
                     <i class="fa-solid fa-microphone"></i> Voice Translation
+                </li>
+
+                <li class="menu-item" id="imageTranslationTab" role="button" tabindex="0" aria-controls="image-translation-section">
+                    <i class="fa-regular fa-image"></i> Image Translation
                 </li>
 
                 <li class="menu-item" id="historyBtn">
@@ -161,51 +164,87 @@
                 </div>
             </section>
 
+            <section id="image-translation-section" class="section-pane" aria-labelledby="imageTranslationTitle">
+                <div class="pane-header">
+                    <h2 id="imageTranslationTitle">Image Translation</h2>
+                    <p>Upload an image to extract and translate its printed text.</p>
+                </div>
+
+                <div class="workspace">
+                    <div class="box">
+                        <div class="box-header">
+                            <label for="imageTranslationFile">Choose image</label>
+                        </div>
+                        <input id="imageTranslationFile" type="file" accept="image/*" class="form-control">
+
+                        <div class="box-header mt-3">
+                            <label for="imageTranslationSource">Source language</label>
+                        </div>
+                        <select id="imageTranslationSource" class="form-select">
+                            <option value="auto">Auto Detect</option>
+                            <option value="en">English</option>
+                            <option value="ur">Urdu</option>
+                            <option value="hi">Hindi</option>
+                            <option value="ar">Arabic</option>
+                            <option value="fr">French</option>
+                            <option value="de">German</option>
+                            <option value="es">Spanish</option>
+                        </select>
+
+                        <div class="box-header mt-3">
+                            <label for="imageTranslationTarget">Target language</label>
+                        </div>
+                        <select id="imageTranslationTarget" class="form-select">
+                            <option value="en">English</option>
+                            <option value="ur">Urdu</option>
+                            <option value="hi">Hindi</option>
+                            <option value="ar">Arabic</option>
+                            <option value="fr">French</option>
+                            <option value="de">German</option>
+                            <option value="es">Spanish</option>
+                        </select>
+
+                        <button type="button" id="translateImageBtn" class="btn mt-3">
+                            Extract and Translate
+                        </button>
+                    </div>
+
+                    <div class="box">
+                        <div class="box-header"><label for="imageExtractedText">Extracted text</label></div>
+                        <textarea id="imageExtractedText" placeholder="Extracted image text will appear here..." readonly></textarea>
+
+                        <div class="box-header mt-3"><label for="imageTranslatedText">Translation</label></div>
+                        <textarea id="imageTranslatedText" placeholder="Translation will appear here..." readonly></textarea>
+                    </div>
+                </div>
+            </section>
+
         </main>
     </div>
 
     <!-- Professional Footer -->
     <footer class="site-footer">
         <div class="footer-inner">
-
-            <div class="footer-brand">
-                <span>⚡</span> AI Language Translator
-            </div>
-
+            <div class="footer-brand"><span>⚡</span> AI Language Translator</div>
             <p class="footer-description">
                 An intelligent text and voice translation assistant
                 designed to make multilingual communication easier.
             </p>
-
             <div class="footer-developer">
                 Developed with <span>♥</span> by
                 <strong>M Asim Imtiaz</strong>
             </div>
-
-            <div class="footer-role">
-                AI &amp; Software Developer
-            </div>
-
+            <div class="footer-role">AI &amp; Software Developer</div>
             <div class="footer-links">
-                <a href="https://github.com/choudharyasim0"
-                   target="_blank"
-                   rel="noopener noreferrer">
+                <a href="https://github.com/choudharyasim0" target="_blank" rel="noopener noreferrer">
                     <i class="fa-brands fa-github"></i> GitHub Profile
                 </a>
-
-                <a href="https://linkedin.com/in/m-asim-imtiaz-1161623a4"
-                   target="_blank"
-                   rel="noopener noreferrer">
+                <a href="https://linkedin.com/in/m-asim-imtiaz-1161623a4" target="_blank" rel="noopener noreferrer">
                     <i class="fa-brands fa-linkedin"></i> LinkedIn
                 </a>
             </div>
-
             <div class="footer-divider"></div>
-
-            <p class="footer-copy">
-                © 2026 M Asim Imtiaz. All Rights Reserved.
-            </p>
-
+            <p class="footer-copy">© 2026 M Asim Imtiaz. All Rights Reserved.</p>
         </div>
     </footer>
 
@@ -213,32 +252,19 @@
     <div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
-
                 <div class="modal-header">
                     <h5 class="modal-title">Translation History</h5>
-
-                    <button type="button"
-                            class="btn-close"
-                            data-bs-dismiss="modal"
-                            aria-label="Close">
-                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-
-                <div class="modal-body">
-                    <div id="historyList"></div>
-                </div>
-
+                <div class="modal-body"><div id="historyList"></div></div>
                 <div class="modal-footer">
-                    <button id="clearHistoryBtn" class="btn btn-secondary">
-                        Clear History
-                    </button>
+                    <button id="clearHistoryBtn" class="btn btn-secondary">Clear History</button>
                 </div>
-
             </div>
         </div>
     </div>
 
-    <!-- Original Tab Switching JavaScript -->
+    <!-- Original tab switching remains unchanged for existing tabs. -->
     <script>
         function switchTab(tabName, element) {
             document.querySelectorAll('.section-pane').forEach((pane) => pane.classList.remove('active'));
@@ -254,9 +280,8 @@
         }
     </script>
 
-    <!-- Original External Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-
+    <script src="{{ url_for('static', filename='js/image-translation.js') }}"></script>
 </body>
 </html>

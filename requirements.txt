@@ -5,3 +5,5 @@ SpeechRecognition==3.10.4
 python-dotenv==1.0.1
 gunicorn==23.0.0
 langdetect==1.0.9
+Pillow==11.1.0
+easyocr==1.7.2

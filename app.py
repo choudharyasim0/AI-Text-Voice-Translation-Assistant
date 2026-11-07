@@ -4,6 +4,7 @@ from flask import Flask, jsonify, render_template, request, send_file
 
 from config import Config
 from services.languages import LanguageService
+from services.ocr import OCRService
 from services.speech import SpeechService
 from services.translator import TranslationError, TranslatorService
 
@@ -27,6 +28,8 @@ def _initialize_services():
 
 
 translator, speech = _initialize_services()
+# OCR model initialization is lazy inside OCRService, so app import does not load it.
+ocr_service = OCRService()
 
 
 @app.route('/')
@@ -65,6 +68,42 @@ def translate():
     except Exception:
         app.logger.exception('Translation request failed')
         return jsonify({'success': False, 'error': 'Translation request failed.'}), 500
+
+
+@app.route('/translate-image', methods=['POST'])
+def translate_image():
+    """Extract text from an uploaded image and translate it."""
+    if translator is None:
+        return jsonify({'success': False, 'error': 'Translation service is unavailable.'}), 503
+
+    image = request.files.get('image')
+    if image is None or not image.filename:
+        return jsonify({'success': False, 'error': 'Please select an image.'}), 400
+    if image.mimetype and not image.mimetype.startswith('image/'):
+        return jsonify({'success': False, 'error': 'The uploaded file must be an image.'}), 400
+
+    try:
+        image_bytes = image.stream.read(OCRService.MAX_IMAGE_BYTES + 1)
+        if len(image_bytes) > OCRService.MAX_IMAGE_BYTES:
+            return jsonify({'success': False, 'error': 'Image exceeds the 8 MB upload limit.'}), 413
+
+        source = request.form.get('source', 'auto').strip() or 'auto'
+        target = request.form.get('target', 'en').strip() or 'en'
+        extracted_text = ocr_service.extract_text(image_bytes)
+        translated_text = translator.translate(extracted_text, source, target)
+        return jsonify({
+            'success': True,
+            'extracted_text': extracted_text,
+            'translation': translated_text,
+        })
+    except ValueError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except Exception:
+        app.logger.exception('Image translation failed')
+        return jsonify({
+            'success': False,
+            'error': 'Could not extract or translate text from this image.',
+        }), 502
 
 
 @app.route('/history')
