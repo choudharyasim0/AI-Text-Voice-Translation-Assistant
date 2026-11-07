@@ -1,8 +1,6 @@
 import os
 
 class Config:
-    SECRET_KEY = os.getenv("SECRET_KEY", "voice_translation_secret_key")
-
-    HISTORY_FILE = "history/translations.json"
-
-    AUDIO_FOLDER = "static/audio"
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'default-secret-key')
+    HISTORY_FILE = os.path.join(os.path.dirname(__file__), 'data', 'history.json')
+    AUDIO_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'audio')
