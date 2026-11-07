@@ -14,29 +14,25 @@ def service(tmp_path):
 def test_google_translation_saves_history(service, monkeypatch):
     class FakeGoogleTranslator:
         def __init__(self, source, target):
-            assert source == 'en'
-            assert target == 'fr'
+            assert (source, target) == ('en', 'fr')
 
         def translate(self, text):
             assert text == 'hello'
             return 'bonjour'
 
     monkeypatch.setattr(translator_module, 'GoogleTranslator', FakeGoogleTranslator)
-    result = service.translate('hello', 'en', 'fr')
-
-    assert result == 'bonjour'
+    assert service.translate('hello', 'en', 'fr') == 'bonjour'
     assert service.get_history()[0]['translated_text'] == 'bonjour'
 
 
-def test_google_failure_uses_mymemory_with_detected_auto_source(service, monkeypatch):
+def test_google_failure_uses_regional_mymemory_codes_and_detected_source(service, monkeypatch):
     class FailedGoogleTranslator:
         def __init__(self, **kwargs):
             raise RuntimeError('rate limited')
 
     class FakeMyMemoryTranslator:
         def __init__(self, source, target):
-            assert source == 'fr'
-            assert target == 'en'
+            assert (source, target) == ('fr-FR', 'en-GB')
 
         def translate(self, text):
             return 'hello'
@@ -49,15 +45,30 @@ def test_google_failure_uses_mymemory_with_detected_auto_source(service, monkeyp
     assert service.get_history() == []
 
 
-def test_both_providers_failing_returns_safe_translation_error(service, monkeypatch):
+def test_google_code_is_mapped_to_mymemory_language_code(service):
+    assert service._mymemory_language_code('fr') == 'fr-FR'
+    assert service._mymemory_language_code('en') == 'en-GB'
+    assert service._mymemory_language_code('zh-CN') == 'zh-CN'
+
+
+def test_unsupported_mymemory_language_has_actionable_error(service, monkeypatch):
+    monkeypatch.setattr(
+        translator_module,
+        'GoogleTranslator',
+        lambda **kwargs: (_ for _ in ()).throw(RuntimeError('rate limited')),
+    )
+    with pytest.raises(TranslationError, match='MyMemory does not support language code'):
+        service.translate('hello', 'en', 'xx', save_history=False)
+
+
+def test_google_and_mymemory_failure_is_reported(service, monkeypatch):
     class FailedTranslator:
         def __init__(self, **kwargs):
             raise RuntimeError('provider unavailable')
 
     monkeypatch.setattr(translator_module, 'GoogleTranslator', FailedTranslator)
     monkeypatch.setattr(translator_module, 'MyMemoryTranslator', FailedTranslator)
-
-    with pytest.raises(TranslationError, match='both Google Translate and MyMemory'):
+    with pytest.raises(TranslationError, match='Translation providers failed'):
         service.translate('hello', 'en', 'fr', save_history=False)
 
 
@@ -68,6 +79,7 @@ def test_invalid_empty_text_is_rejected(service):
 
 def test_history_is_limited_and_clearable(service):
     service.save_to_history('hello', 'bonjour', 'en', 'fr')
-    assert json.loads(open(service.history_file, encoding='utf-8').read())[0]['source_text'] == 'hello'
+    with open(service.history_file, encoding='utf-8') as history_file:
+        assert json.load(history_file)[0]['source_text'] == 'hello'
     service.clear_history()
     assert service.get_history() == []
