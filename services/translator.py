@@ -1,7 +1,9 @@
 import json
 import os
 from datetime import datetime
-from deep_translator import GoogleTranslator
+
+from deep_translator import GoogleTranslator, MyMemoryTranslator
+
 
 class TranslatorService:
     def __init__(self, history_file):
@@ -11,31 +13,51 @@ class TranslatorService:
     def ensure_history_file(self):
         if not os.path.exists(self.history_file):
             try:
-                os.makedirs(os.path.dirname(self.history_file), exist_ok=True)
+                directory = os.path.dirname(self.history_file)
+                if directory:
+                    os.makedirs(directory, exist_ok=True)
+
                 with open(self.history_file, 'w', encoding='utf-8') as f:
                     json.dump([], f)
             except Exception:
                 pass
 
     def translate(self, text, source='auto', target='en', save_history=True):
+        src = source
+
         try:
-            # deep-translator کا سادھا استعمال (کسی API Key یا OAuth کی ضرورت نہیں)
-            translator = GoogleTranslator(source=source, target=target)
-            translated_text = translator.translate(text)
+            translated_text = GoogleTranslator(
+                source=src,
+                target=target
+            ).translate(text)
 
             if not translated_text:
-                raise Exception("Empty translation received")
+                raise ValueError("GoogleTranslator returned an empty translation")
+        except Exception as google_error:
+            try:
+                translated_text = MyMemoryTranslator(
+                    source=source,
+                    target=target
+                ).translate(text)
 
-            if save_history:
-                self.save_to_history(text, translated_text, source, target)
+                if not translated_text:
+                    raise ValueError("MyMemoryTranslator returned an empty translation")
+            except Exception as fallback_error:
+                raise Exception(
+                    "Translation Error: GoogleTranslator failed "
+                    f"({google_error}); MyMemoryTranslator fallback failed "
+                    f"({fallback_error})"
+                ) from fallback_error
 
-            return translated_text
-        except Exception as e:
-            raise Exception(f"Translation Error: {str(e)}")
+        if save_history:
+            self.save_to_history(text, translated_text, source, target)
+
+        return translated_text
 
     def get_history(self):
         if not os.path.exists(self.history_file):
             return []
+
         try:
             with open(self.history_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
@@ -64,4 +86,4 @@ class TranslatorService:
             with open(self.history_file, 'w', encoding='utf-8') as f:
                 json.dump([], f)
         except Exception as e:
-            raise Exception(f"Failed to clear history: {str(e)}")
+            raise Exception(f"Failed to clear history: {str(e)}") from e
