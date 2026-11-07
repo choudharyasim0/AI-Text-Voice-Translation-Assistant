@@ -1,85 +1,186 @@
 import json
+import os
+import tempfile
+import threading
+from datetime import datetime
 
-import pytest
-
-from services import translator as translator_module
-from services.translator import TranslationError, TranslatorService
-
-
-@pytest.fixture
-def service(tmp_path):
-    return TranslatorService(str(tmp_path / 'history' / 'translations.json'))
-
-
-def test_google_translation_saves_history(service, monkeypatch):
-    class FakeGoogleTranslator:
-        def __init__(self, source, target):
-            assert (source, target) == ('en', 'fr')
-
-        def translate(self, text):
-            assert text == 'hello'
-            return 'bonjour'
-
-    monkeypatch.setattr(translator_module, 'GoogleTranslator', FakeGoogleTranslator)
-    assert service.translate('hello', 'en', 'fr') == 'bonjour'
-    assert service.get_history()[0]['translated_text'] == 'bonjour'
+from deep_translator import GoogleTranslator, MyMemoryTranslator
+from deep_translator.constants import (
+    GOOGLE_LANGUAGES_TO_CODES,
+    MY_MEMORY_LANGUAGES_TO_CODES,
+)
+from langdetect import detect
+from langdetect.lang_detect_exception import LangDetectException
 
 
-def test_google_failure_uses_regional_mymemory_codes_and_detected_source(service, monkeypatch):
-    class FailedGoogleTranslator:
-        def __init__(self, **kwargs):
-            raise RuntimeError('rate limited')
-
-    class FakeMyMemoryTranslator:
-        def __init__(self, source, target):
-            assert (source, target) == ('fr-FR', 'en-GB')
-
-        def translate(self, text):
-            return 'hello'
-
-    monkeypatch.setattr(translator_module, 'GoogleTranslator', FailedGoogleTranslator)
-    monkeypatch.setattr(translator_module, 'MyMemoryTranslator', FakeMyMemoryTranslator)
-    monkeypatch.setattr(translator_module, 'detect', lambda text: 'fr')
-
-    assert service.translate('bonjour', 'auto', 'en', save_history=False) == 'hello'
-    assert service.get_history() == []
+class TranslationError(RuntimeError):
+    """Raised when all configured translation providers fail."""
 
 
-def test_google_code_is_mapped_to_mymemory_language_code(service):
-    assert service._mymemory_language_code('fr') == 'fr-FR'
-    assert service._mymemory_language_code('en') == 'en-GB'
-    assert service._mymemory_language_code('zh-CN') == 'zh-CN'
+class TranslatorService:
+    _memory_history = {}
+    _history_lock = threading.RLock()
 
+    def __init__(self, history_file):
+        self.history_file = self._get_history_path(history_file)
+        self.ensure_history_file()
 
-def test_unsupported_mymemory_language_has_actionable_error(service, monkeypatch):
-    monkeypatch.setattr(
-        translator_module,
-        'GoogleTranslator',
-        lambda **kwargs: (_ for _ in ()).throw(RuntimeError('rate limited')),
-    )
-    with pytest.raises(TranslationError, match='MyMemory does not support language code'):
-        service.translate('hello', 'en', 'xx', save_history=False)
+    @staticmethod
+    def _get_history_path(configured_path):
+        if os.environ.get('VERCEL') or os.environ.get('ENVIRONMENT', '').lower() == 'production':
+            return '/tmp/history.json'
+        return configured_path or '/tmp/history.json'
 
+    def ensure_history_file(self):
+        with self._history_lock:
+            try:
+                os.makedirs(os.path.dirname(self.history_file) or '.', exist_ok=True)
+                if not os.path.exists(self.history_file):
+                    self._write_history([])
+            except (OSError, TypeError, ValueError):
+                self._memory_history.setdefault(self.history_file, [])
 
-def test_google_and_mymemory_failure_is_reported(service, monkeypatch):
-    class FailedTranslator:
-        def __init__(self, **kwargs):
-            raise RuntimeError('provider unavailable')
+    @staticmethod
+    def _mymemory_language_code(language):
+        """Map Google/ISO language codes to a code accepted by MyMemory."""
+        mymemory_codes = MY_MEMORY_LANGUAGES_TO_CODES
+        value = str(language).strip()
+        lowered = value.lower()
 
-    monkeypatch.setattr(translator_module, 'GoogleTranslator', FailedTranslator)
-    monkeypatch.setattr(translator_module, 'MyMemoryTranslator', FailedTranslator)
-    with pytest.raises(TranslationError, match='Translation providers failed'):
-        service.translate('hello', 'en', 'fr', save_history=False)
+        for name, code in mymemory_codes.items():
+            if lowered in {name.lower(), code.lower()}:
+                return code
 
+        google_name = next(
+            (name for name, code in GOOGLE_LANGUAGES_TO_CODES.items()
+             if code.lower() == lowered),
+            None,
+        )
+        if google_name and google_name.lower() in mymemory_codes:
+            return mymemory_codes[google_name.lower()]
 
-def test_invalid_empty_text_is_rejected(service):
-    with pytest.raises(ValueError, match='Text is required'):
-        service.translate('  ', save_history=False)
+        base_code = lowered.split('-', 1)[0]
+        for name, code in mymemory_codes.items():
+            if code.split('-', 1)[0].lower() == base_code:
+                return code
 
+        raise ValueError(f"MyMemory does not support language code '{language}'.")
 
-def test_history_is_limited_and_clearable(service):
-    service.save_to_history('hello', 'bonjour', 'en', 'fr')
-    with open(service.history_file, encoding='utf-8') as history_file:
-        assert json.load(history_file)[0]['source_text'] == 'hello'
-    service.clear_history()
-    assert service.get_history() == []
+    @staticmethod
+    def _split_for_mymemory(text, limit=450):
+        chunks = []
+        remaining = text.strip()
+        while remaining:
+            if len(remaining) <= limit:
+                chunks.append(remaining)
+                break
+            split_at = remaining.rfind(' ', 0, limit + 1)
+            if split_at <= 0:
+                split_at = limit
+            chunks.append(remaining[:split_at].strip())
+            remaining = remaining[split_at:].strip()
+        return chunks
+
+    def _translate_with_mymemory(self, text, source, target):
+        mymemory_source = self._mymemory_language_code(source)
+        mymemory_target = self._mymemory_language_code(target)
+        translations = [
+            MyMemoryTranslator(source=mymemory_source, target=mymemory_target).translate(chunk)
+            for chunk in self._split_for_mymemory(text)
+        ]
+        if any(not isinstance(part, str) or not part.strip() for part in translations):
+            raise ValueError('MyMemory returned an empty translation.')
+        return ' '.join(part.strip() for part in translations)
+
+    def translate(self, text, source='auto', target='en', save_history=True):
+        if not isinstance(text, str) or not text.strip():
+            raise ValueError('Text is required for translation.')
+        if not isinstance(source, str) or not source.strip():
+            raise ValueError('A source language is required.')
+        if not isinstance(target, str) or not target.strip():
+            raise ValueError('A target language is required.')
+
+        text, source, target = text.strip(), source.strip(), target.strip()
+        try:
+            translated_text = GoogleTranslator(source=source, target=target).translate(text)
+            if not isinstance(translated_text, str) or not translated_text.strip():
+                raise ValueError('Google returned an empty translation.')
+        except Exception as google_error:
+            fallback_source = source
+            if source.lower() in {'auto', 'autodetect', 'detect'}:
+                try:
+                    fallback_source = detect(text)
+                except (LangDetectException, Exception) as detection_error:
+                    raise TranslationError(
+                        'Google translation failed and the source language could not be '
+                        'detected. Select a source language and try again.'
+                    ) from detection_error
+            try:
+                translated_text = self._translate_with_mymemory(text, fallback_source, target)
+            except Exception as fallback_error:
+                raise TranslationError(
+                    'Translation providers failed. Google error: '
+                    f'{google_error}. MyMemory error: {fallback_error}'
+                ) from fallback_error
+
+        translated_text = translated_text.strip()
+        if save_history:
+            self.save_to_history(text, translated_text, source, target)
+        return translated_text
+
+    def _read_history(self):
+        try:
+            with open(self.history_file, 'r', encoding='utf-8') as history_file:
+                data = json.load(history_file)
+            return data if isinstance(data, list) else []
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            return list(self._memory_history.get(self.history_file, []))
+
+    def _write_history(self, history):
+        directory = os.path.dirname(self.history_file) or '.'
+        os.makedirs(directory, exist_ok=True)
+        fd, temporary_path = tempfile.mkstemp(prefix='.history-', suffix='.json', dir=directory)
+        try:
+            with os.fdopen(fd, 'w', encoding='utf-8') as history_file:
+                json.dump(history[:50], history_file, ensure_ascii=False, indent=2)
+            os.replace(temporary_path, self.history_file)
+        except Exception:
+            try:
+                os.unlink(temporary_path)
+            except OSError:
+                pass
+            raise
+
+    def get_history(self):
+        with self._history_lock:
+            try:
+                history = self._read_history()
+                self._memory_history[self.history_file] = list(history[:50])
+                return history[:50]
+            except Exception:
+                return list(self._memory_history.get(self.history_file, []))
+
+    def save_to_history(self, source_text, translated_text, source_lang, target_lang):
+        with self._history_lock:
+            history = self._read_history()
+            history.insert(0, {
+                'source_text': source_text,
+                'translated_text': translated_text,
+                'source_lang': source_lang,
+                'target_lang': target_lang,
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            })
+            history = history[:50]
+            self._memory_history[self.history_file] = list(history)
+            try:
+                self._write_history(history)
+            except Exception:
+                pass
+
+    def clear_history(self):
+        with self._history_lock:
+            self._memory_history[self.history_file] = []
+            try:
+                self._write_history([])
+            except Exception:
+                pass

@@ -73,18 +73,29 @@ def clear_history():
 
 @app.route("/text-to-speech", methods=["POST"])
 def text_to_speech():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "A JSON object is required."}), 400
+
+    text = data.get("text")
+    if not isinstance(text, str) or not text.strip():
+        return jsonify({"success": False, "error": "Text is required."}), 400
+
+    lang = data.get("lang") or "en"
+    if not isinstance(lang, str):
+        return jsonify({"success": False, "error": "Invalid language selection."}), 400
+
     try:
-        data = request.get_json(silent=True) or {}
-        text = (data.get("text") or "").strip()
-        lang = data.get("lang") or "en"
-
-        if not text:
-            return jsonify({"success": False, "error": "Text is required."}), 400
-
-        audio_file = speech.generate_audio(text, lang)
-        return send_file(audio_file, mimetype="audio/mpeg", as_attachment=False)
-    except Exception as exc:
-        return jsonify({"success": False, "error": str(exc)}), 500
+        audio_buffer = speech.generate_audio(text, lang)
+        return send_file(
+            audio_buffer,
+            mimetype="audio/mpeg",
+            as_attachment=False,
+            download_name="speech.mp3",
+        )
+    except Exception:
+        app.logger.exception("Text-to-speech generation failed")
+        return jsonify({"success": False, "error": "Text-to-speech generation failed."}), 502
 
 
 if __name__ == "__main__":
