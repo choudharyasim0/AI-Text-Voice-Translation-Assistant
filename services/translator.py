@@ -19,7 +19,7 @@ class TranslatorService:
 
     def translate(self, text, source='auto', target='en', save_history=True):
         try:
-            # deep-translator کا استعمال (یہ 100% مستحکم ہے اور رےٹ لمٹ نہیں دیتا)
+            # deep-translator کا استعمال (یہ Vercel IPs پر 100% مستحکم ہے اور Rate Limit ایرر نہیں دیتا)
             translator = GoogleTranslator(source=source, target=target)
             translated_text = translator.translate(text)
 
@@ -49,10 +49,10 @@ class TranslatorService:
                 'target_lang': target_lang,
                 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
-            history.insert(0, entry)  # نئی ہسٹری سب سے اوپر آئے گی
+            history.insert(0, entry)  # نئی اینٹری سب سے اوپر آئے گی
 
             with open(self.history_file, 'w', encoding='utf-8') as f:
-                json.dump(history[:50], f, ensure_ascii=False, indent=2)  # صرف آخری 50 اینٹریز سیو رکھے گا
+                json.dump(history[:50], f, ensure_ascii=False, indent=2)
         except Exception:
             pass
 
