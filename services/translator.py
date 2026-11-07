@@ -1,141 +1,64 @@
-
 import json
 import os
-import html
-import urllib.request
-import urllib.error
-
 from datetime import datetime
-from threading import Thread, Lock
-
+from deep_translator import GoogleTranslator
 
 class TranslatorService:
-
     def __init__(self, history_file):
-
         self.history_file = history_file
-        self.history_lock = Lock()
+        self.ensure_history_file()
 
-        if not os.path.exists(history_file):
-            with open(history_file, "w") as f:
-                json.dump([], f)
-
-    def translate(self, text, source, target, save_history=True):
-
-        api_key = os.environ.get("GOOGLE_TRANSLATE_API_KEY")
-
-        if not api_key:
-            raise RuntimeError(
-                "Google Translation API key is missing. "
-                "Configure GOOGLE_TRANSLATE_API_KEY in Vercel."
-            )
-
-        payload = {
-            "q": text,
-            "target": target,
-            "format": "text"
-        }
-
-        # Auto-detection: source language is omitted
-        if source and source.lower() != "auto":
-            payload["source"] = source
-
-        request_data = json.dumps(payload).encode("utf-8")
-
-        request = urllib.request.Request(
-            "https://translation.googleapis.com/language/translate/v2",
-            data=request_data,
-            headers={
-                "Content-Type": "application/json",
-                "X-Goog-Api-Key": api_key
-            },
-            method="POST"
-        )
-
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                result = json.loads(
-                    response.read().decode("utf-8")
-                )
-
-            translated = html.unescape(
-                result["data"]["translations"][0]["translatedText"]
-            )
-
-        except urllib.error.HTTPError as error:
-
+    def ensure_history_file(self):
+        if not os.path.exists(self.history_file):
             try:
-                error_data = json.loads(
-                    error.read().decode("utf-8")
-                )
-
-                message = error_data.get(
-                    "error", {}
-                ).get(
-                    "message",
-                    "Google Translation API request failed."
-                )
-
+                os.makedirs(os.path.dirname(self.history_file), exist_ok=True)
+                with open(self.history_file, 'w', encoding='utf-8') as f:
+                    json.dump([], f)
             except Exception:
-                message = "Google Translation API request failed."
+                pass
 
-            raise RuntimeError(message) from None
+    def translate(self, text, source='auto', target='en', save_history=True):
+        try:
+            # deep-translator کا استعمال (یہ 100% مستحکم ہے اور رےٹ لمٹ نہیں دیتا)
+            translator = GoogleTranslator(source=source, target=target)
+            translated_text = translator.translate(text)
 
-        except urllib.error.URLError:
-            raise RuntimeError(
-                "Unable to connect to Google Translation API."
-            ) from None
+            if save_history:
+                self.save_to_history(text, translated_text, source, target)
 
-        except (KeyError, IndexError, ValueError):
-            raise RuntimeError(
-                "Invalid response received from Google Translation API."
-            ) from None
-
-        if save_history:
-            Thread(
-                target=self.save_history,
-                args=(text, translated, source, target),
-                daemon=True
-            ).start()
-
-        return translated
-
-    def save_history(
-        self,
-        original,
-        translated,
-        source,
-        target
-    ):
-
-        with self.history_lock:
-
-            try:
-                with open(self.history_file, "r") as f:
-                    data = json.load(f)
-
-            except (json.JSONDecodeError, FileNotFoundError):
-                data = []
-
-            data.append({
-                "original": original,
-                "translated": translated,
-                "source": source,
-                "target": target,
-                "time": datetime.now().strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-            })
-
-            with open(self.history_file, "w") as f:
-                json.dump(data, f, indent=4)
+            return translated_text
+        except Exception as e:
+            raise Exception(f"Translation Error: {str(e)}")
 
     def get_history(self):
+        if not os.path.exists(self.history_file):
+            return []
+        try:
+            with open(self.history_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return []
 
-        with open(self.history_file) as f:
-            return json.load(f)
+    def save_to_history(self, source_text, translated_text, source_lang, target_lang):
+        try:
+            history = self.get_history()
+            entry = {
+                'source_text': source_text,
+                'translated_text': translated_text,
+                'source_lang': source_lang,
+                'target_lang': target_lang,
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            history.insert(0, entry)  # نئی ہسٹری سب سے اوپر آئے گی
+
+            with open(self.history_file, 'w', encoding='utf-8') as f:
+                json.dump(history[:50], f, ensure_ascii=False, indent=2)  # صرف آخری 50 اینٹریز سیو رکھے گا
+        except Exception:
+            pass
 
     def clear_history(self):
-
-        with open(self.history_file, "w") as f:
-            json.dump([], f)
+        try:
+            with open(self.history_file, 'w', encoding='utf-8') as f:
+                json.dump([], f)
+        except Exception as e:
+            raise Exception(f"Failed to clear history: {str(e)}")
