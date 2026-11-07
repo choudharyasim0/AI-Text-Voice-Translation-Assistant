@@ -23,16 +23,15 @@ class TranslatorService:
                 pass
 
     def translate(self, text, source='auto', target='en', save_history=True):
-        src = source
-
         try:
             translated_text = GoogleTranslator(
-                source=src,
+                source=source,
                 target=target
             ).translate(text)
 
             if not translated_text:
                 raise ValueError("GoogleTranslator returned an empty translation")
+
         except Exception as google_error:
             try:
                 translated_text = MyMemoryTranslator(
@@ -44,20 +43,21 @@ class TranslatorService:
                     raise ValueError("MyMemoryTranslator returned an empty translation")
             except Exception as fallback_error:
                 raise Exception(
-                    "Translation Error: GoogleTranslator failed "
-                    f"({google_error}); MyMemoryTranslator fallback failed "
-                    f"({fallback_error})"
+                    f"Translation Error: GoogleTranslator failed ({google_error}); "
+                    f"MyMemoryTranslator fallback failed ({fallback_error})"
                 ) from fallback_error
 
         if save_history:
-            self.save_to_history(text, translated_text, source, target)
+            try:
+                self.save_to_history(text, translated_text, source, target)
+            except Exception:
+                pass
 
         return translated_text
 
     def get_history(self):
         if not os.path.exists(self.history_file):
             return []
-
         try:
             with open(self.history_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
