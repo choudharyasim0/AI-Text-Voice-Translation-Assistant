@@ -6,6 +6,8 @@ from datetime import datetime
 
 from deep_translator import GoogleTranslator, MyMemoryTranslator
 from deep_translator.constants import MY_MEMORY_LANGUAGES_TO_CODES
+from langdetect import detect
+from langdetect.lang_detect_exception import LangDetectException
 
 
 class TranslationError(RuntimeError):
@@ -17,7 +19,6 @@ class TranslatorService:
     _history_lock = threading.RLock()
 
     def __init__(self, history_file='/tmp/history.json'):
-        # Vercel's writable filesystem is limited to /tmp.
         self.history_file = (
             '/tmp/history.json'
             if os.environ.get('VERCEL')
@@ -37,12 +38,15 @@ class TranslatorService:
 
     @staticmethod
     def _mymemory_code(language):
+        """Map a detected/selected language code to a MyMemory locale code."""
         value = str(language).strip()
-        if value.lower() in {'auto', 'detect', 'autodetect'}:
-            return 'auto'
-
-        codes = MY_MEMORY_LANGUAGES_TO_CODES
         lowered = value.lower()
+        codes = MY_MEMORY_LANGUAGES_TO_CODES
+
+        # Never pass auto to MyMemory: its endpoint rejects LANGPAIR=AUTO|xx.
+        if lowered in {'auto', 'detect', 'autodetect'}:
+            raise ValueError('MyMemory requires a specific source language, not auto.')
+
         for name, code in codes.items():
             if lowered in {name.lower(), code.lower()}:
                 return code
@@ -74,10 +78,22 @@ class TranslatorService:
                 raise ValueError('Google Translator returned an empty translation.')
         except Exception as google_error:
             try:
-                memory_source = self._mymemory_code(source)
+                # MyMemory does not accept AUTO as a source code. Detect the language
+                # first when the UI sent auto, then map it to MyMemory's locale format.
+                fallback_source = source
+                if source.lower() in {'auto', 'detect', 'autodetect'}:
+                    try:
+                        fallback_source = detect(text_to_translate)
+                    except LangDetectException as detection_error:
+                        raise ValueError(
+                            'Could not detect the source language. Please select it manually.'
+                        ) from detection_error
+
+                memory_source = self._mymemory_code(fallback_source)
                 memory_target = self._mymemory_code(target)
+
                 # MyMemory limits an individual request; split long paragraphs while
-                # retaining the full source and output in history.
+                # preserving the full input/output in history.
                 parts = []
                 remaining = text_to_translate
                 while remaining:
@@ -88,12 +104,14 @@ class TranslatorService:
                         if cut <= 0:
                             cut = 450
                         part, remaining = remaining[:cut], remaining[cut:].lstrip()
+
                     result = MyMemoryTranslator(
                         source=memory_source, target=memory_target
                     ).translate(part)
                     if not isinstance(result, str) or not result.strip():
                         raise ValueError('MyMemory returned an empty translation.')
                     parts.append(result.strip())
+
                 translated_text = ' '.join(parts)
             except Exception as fallback_error:
                 raise TranslationError(
@@ -106,7 +124,7 @@ class TranslatorService:
             try:
                 self.save_to_history(original_text, translated_text, source, target)
             except Exception:
-                # A history-storage problem must never fail a successful translation.
+                # History writes are best effort and must not break translation.
                 pass
         return translated_text
 
@@ -158,7 +176,6 @@ class TranslatorService:
                 self._memory_history[self.history_file] = list(history)
                 self._write_history(history)
             except Exception:
-                # Preserve best-effort in-memory history and never propagate I/O errors.
                 current = list(self._memory_history.get(self.history_file, []))
                 if not current or current[0] != entry:
                     current.insert(0, entry)
